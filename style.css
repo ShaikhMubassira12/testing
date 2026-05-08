@@ -193,6 +193,7 @@ img, svg, canvas { display: block; }
   height: 100vh;
   z-index: 2;
   pointer-events: auto;
+  cursor: pointer;
 }
 
 /* =========================================================

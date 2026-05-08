@@ -63,17 +63,17 @@ function resize() {
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.6, 0.05);
-bloom.threshold = 0.05;
-bloom.strength  = 0.95;
-bloom.radius    = 0.75;
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.35, 0.6, 0.08);
+bloom.threshold = 0.18;
+bloom.strength  = 0.28;
+bloom.radius    = 0.35;
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 /* ---------------------------------------------------------
-   The Particle Ring (organic, wavy, shader-deformed)
+  The Particle Cloud (soft translucent bubbles)
 --------------------------------------------------------- */
-const PARTICLE_COUNT = 14000;
+const PARTICLE_COUNT = 13500;
 
 const ringGeometry = new THREE.BufferGeometry();
 const positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -82,30 +82,26 @@ const radiusArr = new Float32Array(PARTICLE_COUNT);     // distance from center 
 const angleArr  = new Float32Array(PARTICLE_COUNT);     // base angle
 const sizesArr  = new Float32Array(PARTICLE_COUNT);     // base size
 
-const BASE_R = 1.85;
+const BASE_R = 1.9;
+const CLOUD_X = 2.7;
+const CLOUD_Y = 1.9;
 
 for (let i = 0; i < PARTICLE_COUNT; i++) {
-  const angle = Math.random() * Math.PI * 2;
-
-  // Ring thickness — most particles near edge, some layered inward (cluster profile)
-  // Use mix of two distributions for depth
   const band = Math.random();
+  const angle = Math.random() * Math.PI * 2;
   let r;
-  if (band < 0.78) {
-    // Main wavy ring band
-    r = BASE_R + (Math.random() - 0.5) * 0.22;
-  } else if (band < 0.94) {
-    // Softer inner halo
-    r = BASE_R - Math.random() * 0.55;
+  if (band < 0.68) {
+    r = BASE_R * (0.58 + Math.pow(Math.random(), 1.5) * 0.7);
+  } else if (band < 0.92) {
+    r = BASE_R * (1.0 + Math.random() * 0.72);
   } else {
-    // Outer drift particles
-    r = BASE_R + Math.random() * 0.45;
+    r = BASE_R * (1.28 + Math.random() * 0.55);
   }
 
-  // Initial position on XY plane (Z adds subtle depth)
-  const x = Math.cos(angle) * r;
-  const y = Math.sin(angle) * r;
-  const z = (Math.random() - 0.5) * 0.35;
+  const squash = 0.72 + Math.random() * 0.36;
+  const x = Math.cos(angle) * r * CLOUD_X * squash;
+  const y = Math.sin(angle) * r * CLOUD_Y * (1.18 - squash * 0.35);
+  const z = (Math.random() - 0.5) * 0.9;
 
   positions[i * 3 + 0] = x;
   positions[i * 3 + 1] = y;
@@ -114,7 +110,7 @@ for (let i = 0; i < PARTICLE_COUNT; i++) {
   angleArr[i]  = angle;
   radiusArr[i] = r;
   seeds[i]     = Math.random();
-  sizesArr[i]  = 0.6 + Math.random() * 1.4;
+  sizesArr[i]  = 0.35 + Math.random() * 0.95;
 }
 
 ringGeometry.setAttribute('position',  new THREE.BufferAttribute(positions, 3));
@@ -230,18 +226,22 @@ const vertexShader = /* glsl */`
     // Convert mouse from NDC-ish world to same space (we pass in world-space mouse)
     vec3 toMouse = pos - uMouse;
     float md = length(toMouse);
-    float repelRadius = 0.85;
+    float repelRadius = 1.35;
     float repel = smoothstep(repelRadius, 0.0, md);
-    pos += normalize(toMouse + vec3(0.0001)) * repel * uMouseStrength;
+    float smoothRepel = repel * repel * (3.0 - 2.0 * repel);
+    vec3 repelDir = normalize(toMouse + vec3(0.0001));
+    vec3 swirlDir = normalize(cross(vec3(0.0, 0.0, 1.0), repelDir));
+    pos += repelDir * smoothRepel * uMouseStrength * 1.05;
+    pos += swirlDir * smoothRepel * uMouseStrength * 0.22;
 
-    vGlow = repel;                                   // pass to fragment for brighter hover
+    vGlow = smoothRepel;                              // pass to fragment for brighter hover
     vDepth = pos.z;
 
     vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPos;
 
-    // Point size — attenuated by depth, scaled by wave intensity
-    float sizeBoost = 1.0 + repel * 1.6 + abs(wave) * 1.8;
+    // Point size — kept small so the particles read as bubbles, not flares
+    float sizeBoost = 0.72 + smoothRepel * 0.95 + abs(wave) * 0.7;
     gl_PointSize = uSize * aSize * sizeBoost * uPixelRatio * (1.0 / -mvPos.z);
     gl_PointSize *= smoothstep(0.0, 0.6, uAssemble);
   }
@@ -261,29 +261,26 @@ const fragmentShader = /* glsl */`
   varying float vDepth;
 
   void main() {
-    // Soft circular particle with glow falloff
     vec2 uv = gl_PointCoord - 0.5;
     float d = length(uv);
-    float alpha = smoothstep(0.5, 0.0, d);
-    alpha = pow(alpha, 1.6);
-
-    // Core highlight
-    float core = smoothstep(0.25, 0.0, d);
+    float outer = smoothstep(0.5, 0.0, d);
+    float rim = smoothstep(0.5, 0.35, d) - smoothstep(0.35, 0.22, d);
+    float alpha = pow(outer, 1.8) * 0.11 + rim * 0.04;
 
     // Color gradient per-particle based on seed + depth + time
     float mixA = fract(vSeed + uTime * 0.03);
-    vec3 col1 = mix(uColorA, uColorB, smoothstep(0.0, 0.5, mixA));
-    vec3 col2 = mix(uColorB, uColorC, smoothstep(0.5, 1.0, mixA));
-    vec3 col  = mix(col1, col2, 0.5);
+    vec3 col1 = mix(uColorA, uColorC, smoothstep(0.0, 1.0, mixA));
+    vec3 col2 = mix(uColorB, vec3(0.90, 0.95, 1.0), smoothstep(0.2, 1.0, mixA));
+    vec3 col  = mix(col1, col2, 0.45);
 
-    // White hot highlight in core
-    col = mix(col, uColorD, core * 0.7);
-
-    // Hover brightens + shifts toward white/cyan
-    col = mix(col, vec3(0.85, 0.98, 1.0), vGlow * 0.65);
+    // Subtle specular highlight for a bubble-like finish.
+    float highlight = smoothstep(0.16, 0.0, length(uv - vec2(-0.12, 0.12)));
+    col = mix(col, vec3(1.0), highlight * 0.20);
+    col = mix(col, vec3(0.94, 0.99, 1.0), vGlow * 0.16);
+    alpha += vGlow * 0.03;
 
     // Depth subtle tint
-    col *= 0.85 + vDepth * 0.25;
+    col *= 0.70 + vDepth * 0.12;
 
     gl_FragColor = vec4(col, alpha);
     if (gl_FragColor.a < 0.01) discard;
@@ -295,11 +292,11 @@ const ringMaterial = new THREE.ShaderMaterial({
   fragmentShader,
   transparent: true,
   depthWrite: false,
-  blending: THREE.AdditiveBlending,
+  blending: THREE.NormalBlending,
   uniforms: {
     uTime:           { value: 0 },
     uPixelRatio:     { value: Math.min(window.devicePixelRatio, 2) },
-    uSize:           { value: 34 },
+    uSize:           { value: 18 },
     uNoiseStrength:  { value: 1.0 },
     uWaveStrength:   { value: 0.22 },
     uAssemble:       { value: 0.0 },
@@ -334,7 +331,7 @@ dustGeo.setAttribute('aSeed',    new THREE.BufferAttribute(dustSeed, 1));
 const dustMat = new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
-  blending: THREE.AdditiveBlending,
+  blending: THREE.NormalBlending,
   uniforms: {
     uTime:       { value: 0 },
     uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
@@ -361,7 +358,7 @@ const dustMat = new THREE.ShaderMaterial({
       float d = length(uv);
       float a = smoothstep(0.5, 0.0, d);
       vec3 c = mix(vec3(0.35, 0.75, 1.0), vec3(0.65, 0.55, 1.0), vSeed);
-      gl_FragColor = vec4(c, a * 0.35);
+      gl_FragColor = vec4(c, a * 0.08);
       if (gl_FragColor.a < 0.01) discard;
     }
   `,
@@ -386,34 +383,36 @@ function updateMouseWorld() {
   raycaster.setFromCamera(mouseNDC, camera);
   const hit = new THREE.Vector3();
   raycaster.ray.intersectPlane(mousePlane, hit);
-  // Smoothly approach
-  mouseWorld.lerp(hit, 0.18);
+  // React immediately to cursor movement
+  mouseWorld.copy(hit);
   ringMaterial.uniforms.uMouse.value.copy(mouseWorld);
 }
 
-canvas.addEventListener('pointermove', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+function handlePointerMove(e) {
+  mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseNDC.y = -((e.clientY / window.innerHeight) * 2 - 1);
   mouseActive = true;
 
   // Boost wave + glow intensity on hover
-  gsap.to(ringMaterial.uniforms.uWaveStrength, { value: 0.34, duration: 0.8, ease: 'power2.out', overwrite: true });
-  gsap.to(ringMaterial.uniforms.uMouseStrength, { value: 0.55, duration: 0.8, ease: 'power2.out', overwrite: true });
-});
+  gsap.to(ringMaterial.uniforms.uWaveStrength, { value: 0.28, duration: 0.2, ease: 'power2.out', overwrite: true });
+  gsap.to(ringMaterial.uniforms.uMouseStrength, { value: 0.5, duration: 0.2, ease: 'power2.out', overwrite: true });
+}
 
-canvas.addEventListener('pointerleave', () => {
+window.addEventListener('pointermove', handlePointerMove, { passive: true });
+
+window.addEventListener('pointerout', (e) => {
+  if (e.relatedTarget) return;
+  gsap.to(ringMaterial.uniforms.uWaveStrength, { value: 0.22, duration: 0.45, ease: 'power2.out', overwrite: true });
+  gsap.to(ringMaterial.uniforms.uMouseStrength, { value: 0.18, duration: 0.45, ease: 'power2.out', overwrite: true });
   mouseActive = false;
-  gsap.to(ringMaterial.uniforms.uWaveStrength, { value: 0.22, duration: 1.2, ease: 'power2.out', overwrite: true });
-  gsap.to(ringMaterial.uniforms.uMouseStrength, { value: 0.35, duration: 1.2, ease: 'power2.out', overwrite: true });
 });
 
 /* Click ripple */
 canvas.addEventListener('pointerdown', () => {
   gsap.fromTo(ringMaterial.uniforms.uWaveStrength,
     { value: 0.55 },
-    { value: 0.22, duration: 1.6, ease: 'power3.out', overwrite: true });
-  gsap.fromTo(bloom, { strength: 1.6 }, { strength: 0.95, duration: 1.2, ease: 'power2.out', overwrite: true });
+    { value: 0.18, duration: 1.6, ease: 'power3.out', overwrite: true });
+  gsap.fromTo(bloom, { strength: 0.22 }, { strength: 0.18, duration: 1.2, ease: 'power2.out', overwrite: true });
 });
 
 /* ---------------------------------------------------------
@@ -499,7 +498,7 @@ tl.to(canvas, { opacity: 1, duration: 1.4 }, 0)
   .to(fades, { y: 0, opacity: 1, duration: 1.0, stagger: 0.08 }, 0.6)
   .to(chips, { y: 0, opacity: 1, duration: 0.7, stagger: 0.06 }, 1.0)
   .to(visualLabels, { y: 0, opacity: 1, duration: 0.9, stagger: 0.1 }, 1.2)
-  .fromTo(bloom, { strength: 0.2 }, { strength: 0.95, duration: 1.8, ease: 'power2.out' }, 0.4);
+  .fromTo(bloom, { strength: 0.05 }, { strength: 0.18, duration: 1.8, ease: 'power2.out' }, 0.4);
 
 /* ---------------------------------------------------------
    Hover micro-interactions on chips
