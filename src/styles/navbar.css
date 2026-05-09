@@ -1,0 +1,91 @@
+/* Navbar — z: 50 */
+
+.nav {
+  position: fixed;
+  top: 18px; 
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1280px, calc(100% - 40px));
+  z-index: 50 !important;
+}
+
+.nav-inner {
+  height: var(--nav-h);
+  padding: 0 22px 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(10, 13, 34, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.brand {
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.brand-mark {
+  width: 34px; 
+  height: 34px;
+  display: grid; 
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.brand-mark svg { 
+  width: 22px; 
+  height: 22px; 
+  animation: spinSlow 18s linear infinite; 
+}
+
+@keyframes spinSlow { 
+  to { transform: rotate(360deg); } 
+}
+
+.brand-name { 
+  font-size: 16px; 
+}
+
+.brand-dot { 
+  color: var(--c-cyan); 
+}
+
+.nav-links {
+  display: flex; 
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.nav-links a {
+  display: inline-block;
+  padding: 8px 14px;
+  color: var(--ink-dim);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 999px;
+  transition: color 0.25s var(--ease), background 0.25s var(--ease);
+}
+
+.nav-links a:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-cta {
+  margin-left: auto;
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+}
