@@ -22,11 +22,13 @@ const HomePage = () => {
       smoothTouch: false,
     });
 
+    let rafId;
+
     function raf(time) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     // GSAP Entrance Timeline
     const titleLines = document.querySelectorAll('.hero-title .line > span');
@@ -72,6 +74,7 @@ const HomePage = () => {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      cancelAnimationFrame(rafId);
       lenis.destroy();
     };
   }, []);

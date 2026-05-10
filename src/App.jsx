@@ -9,6 +9,7 @@ import './styles/navbar.css';
 import './styles/buttons.css';
 import './styles/hero.css';
 import './styles/animations.css';
+import './styles/request-demo.css';
 import './styles/responsive.css';
 
 const App = () => {
@@ -19,8 +20,9 @@ const App = () => {
     document.head.appendChild(styleTag);
   }, []);
 
-  // Get current route (currently just showing home page)
-  const currentRoute = routes.find(route => route.path === '/') || routes[0];
+  // Get current route (simple path-based routing)
+  const currentPath = window.location.pathname || '/';
+  const currentRoute = routes.find(route => route.path === currentPath) || routes[0];
   const CurrentComponent = currentRoute.component;
 
   return (
