@@ -4,8 +4,6 @@ import ScrollTrigger from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import {
   Navbar,
-  Background,
-  ParticleScene,
   Hero,
   NextSection,
 } from '../../components';
@@ -81,8 +79,6 @@ const HomePage = () => {
 
   return (
     <div className="app">
-      <Background />
-      <ParticleScene />
       <Navbar />
       <Hero />
       <NextSection />

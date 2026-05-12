@@ -1,11 +1,9 @@
 import React from "react";
-import { Background, Navbar, ParticleScene } from "../../components";
+import { Navbar } from "../../components";
 
 const RequestDemoPage = () => {
   return (
     <div className="app">
-      <Background />
-      <ParticleScene />
       <Navbar />
 
       <section className="request-demo">

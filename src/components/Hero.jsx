@@ -7,10 +7,17 @@ import Chips from './Chips';
 import Stats from './Stats';
 import HUDLabels from './HUDLabels';
 import ScrollHint from './ScrollHint';
+import Background from './Background';
+import ParticleScene from './ParticleScene';
 
 const Hero = () => {
   return (
     <section className="hero">
+      <div className="hero-visuals" aria-hidden="true">
+        <Background />
+        <ParticleScene />
+      </div>
+
       <div className="hero-inner">
         <Eyebrow />
         <HeroTitle />

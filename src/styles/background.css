@@ -1,7 +1,7 @@
 /* Background layers — z: 0 */
 
 .grid-bg {
-  position: fixed !important; 
+  position: absolute !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
@@ -23,7 +23,7 @@
 }
 
 .glow {
-  position: fixed !important;
+  position: absolute !important;
   border-radius: 50%;
   filter: blur(100px);
   opacity: 0.55;
@@ -57,8 +57,8 @@
 /* GIANT ANIMATED BRAND TEXT — z: 1 */
 
 .brand-bg {
-  position: fixed !important;
-  top: 50% !important; 
+  position: absolute !important;
+  top: 44% !important;
   left: 50% !important;
   transform: translate(-50%, -50%);
   width: 100%;
@@ -129,11 +129,11 @@
 /* Particle canvas — z: 2 */
 
 #particle-canvas {
-  position: fixed !important;
+  position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
+  width: 100% !important;
+  height: 100% !important;
   z-index: 2 !important;
   pointer-events: auto;
   cursor: pointer;
@@ -143,7 +143,7 @@
 /* Noise overlay — z: 3 */
 
 .noise {
-  position: fixed !important; 
+  position: absolute !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;

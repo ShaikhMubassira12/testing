@@ -17,9 +17,21 @@ const ParticleScene = () => {
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const container = canvas.parentElement || window;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const container = canvas.parentElement;
+
+    const getCanvasSize = () => {
+      if (!container) {
+        return { width: window.innerWidth, height: window.innerHeight };
+      }
+
+      const rect = container.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.floor(rect.width)),
+        height: Math.max(1, Math.floor(rect.height)),
+      };
+    };
+
+    const { width, height } = getCanvasSize();
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -277,6 +289,7 @@ const ParticleScene = () => {
     ringMaterialRef.current = ringMaterial;
 
     const ring = new THREE.Points(ringGeometry, ringMaterial);
+    ring.position.y = 0.45;
     scene.add(ring);
 
     // Dust particles
@@ -332,6 +345,7 @@ const ParticleScene = () => {
     });
 
     const dust = new THREE.Points(dustGeo, dustMat);
+    dust.position.y = 0.45;
     scene.add(dust);
 
     // Mouse tracking
@@ -355,8 +369,7 @@ const ParticleScene = () => {
 
     // Handle resize
     const resize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const { width: w, height: h } = getCanvasSize();
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h, false);
